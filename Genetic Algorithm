@@ -1,0 +1,51 @@
+def optimize_network(X, y, n_generations, population_size, mutation_rate, crossover_rate, elitism_rate):
+    # Define the fitness function for an individual (neural network architecture)
+    def fitness_function(individual):
+        n_hidden_layers, n_neurons_per_layer, activation_function = individual
+        nn = FeedForwardNN(X.shape[1], y.shape[1], n_hidden_layers, n_neurons_per_layer, activation_function)
+        nn.set_params(weights_and_biases)
+        return -nn.evaluate(X, y)  # We want to maximize fitness, but genetic algorithm minimizes the objective function
+    
+    # Initialize the genetic algorithm
+    ga = GeneticAlgorithm(fitness_function, population_size, mutation_rate, crossover_rate, elitism_rate)
+    
+    # Initialize the population of individuals (neural network architectures)
+    population = ga.initialize_population(X.shape[1])
+    
+    # Run the genetic algorithm for n_generations
+    for i in range(n_generations):
+        # Evaluate fitness of the population
+        fitness_values = [fitness_function(individual) for individual in population]
+        
+        # Select parents and create offspring
+        new_population = []
+        for j in range(int(elitism_rate * population_size)):
+            # Copy the best individuals into the next generation
+            best_individual = population[np.argmin(fitness_values)]
+            new_population.append(best_individual)
+        while len(new_population) < population_size:
+            parent1, parent2 = ga.select_parents(population, fitness_values)
+            child1, child2 = ga.crossover(parent1, parent2)
+            new_population.extend([child1, child2])
+        
+        # Mutate the offspring
+        for individual in new_population:
+            ga.mutate(individual)
+        
+        # Update the population
+        population = new_population
+        
+    # Get the best individual from the final population
+    fitness_values = [fitness_function(individual) for individual in population]
+    best_individual = population[np.argmin(fitness_values)]
+    
+    # Create a neural network with the best architecture found by the genetic algorithm
+    n_hidden_layers, n_neurons_per_layer, activation_function = best_individual
+    nn = FeedForwardNN(X.shape[1], y.shape[1], n_hidden_layers, n_neurons_per_layer, activation_function)
+    
+    # Train the neural network using backpropagation with the weights and biases evolved by the genetic algorithm
+    weights_and_biases = nn.get_params()
+    weights_and_biases = optimize_weights_and_biases(X, y, weights_and_biases)
+    nn.set_params(weights_and_biases)
+    
+    return nn
